@@ -239,7 +239,9 @@ WantedBy=multi-user.target
   takes effect only through an embedder switch". When config and record
   differ, or the engine runs something other than the record,
   `GET /api/memory/models` and the `memory_embedder` row of `hal0 doctor all`
-  say so and nothing is rewritten.
+  say so and nothing is rewritten. `hal0 memory embedder switch <model>` is
+  the one way to change it; see
+  [Change the embedding model](/docs/guides/enable-memory#change-the-embedding-model).
 
 ### Config files it reads
 
