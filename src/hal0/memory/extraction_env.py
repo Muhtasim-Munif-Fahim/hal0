@@ -1319,6 +1319,7 @@ def apply_showcase_dropin(
     graph: MemoryGraphConfig | None = None,
     restart: bool = True,
     seam: SystemCtlSeam | None = None,
+    embedder: Embedder | None = None,
 ) -> dict[str, Any]:
     """Write the showcase drop-in and (best-effort) restart hindsight-api (#3492).
 
@@ -1338,6 +1339,11 @@ def apply_showcase_dropin(
     store yet is recorded as the configured pair only after the drop-in
     carrying it is on disk, so the record cannot name an embedder the engine
     was never started with. A record file that cannot be read is left alone.
+
+    ``embedder`` is for ``hal0 memory embedder switch`` alone
+    (:mod:`hal0.memory.embedder_switch`): it renders exactly that pair, which
+    is the one case where the restart is meant to move the engine to another
+    embedder. The record is the caller's to write; nothing is recorded here.
     """
     seam = seam if seam is not None else SystemCtlSeam()
     result: dict[str, Any] = {
@@ -1347,20 +1353,20 @@ def apply_showcase_dropin(
         "restarted": False,
         "error": None,
     }
-    view = ensure_embedder_record(configured_embedder(models))
+    view = ensure_embedder_record(configured_embedder(models)) if embedder is None else None
     try:
         body = render_showcase_env(
             models=models,
             decision=decision,
             lanes=lanes,
             ceiling=showcase_ceiling(graph),
-            embedder=view.render,
+            embedder=view.render if view is not None else embedder,
         )
         seam.write_hindsight_showcase_dropin(
             body, path=SHOWCASE_DROP_IN_PATH, timeout=_SYSTEMCTL_TIMEOUT_S
         )
         result["written"] = True
-        if view.record_error is None and not view.record.persisted:
+        if view is not None and view.record_error is None and not view.record.persisted:
             persist_embedder_record(view.record)
         # #3520: the write also retires the hand-maintained H0-98 drop-in;
         # say so if it survived (e.g. a pre-#3520 seam wrapper on the box).
